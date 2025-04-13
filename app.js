@@ -1,17 +1,18 @@
 import express from "express";
-import multer from "multer";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 import xlsToJson from "xls-to-json-lc";
 import { Parser } from "json2csv";
-import fs from "fs";
 
 const app = express();
-const upload = multer({ dest: "uploads/" });
+app.use(express.raw({ type: "application/octet-stream", limit: "10mb" }));
 
-app.post("/convert", upload.single("file"), (req, res) => {
-  const filePath = req.file.path;
+app.post("/convert", (req, res) => {
+  const tempFilePath = `/tmp/${uuidv4()}.xls`;
+  fs.writeFileSync(tempFilePath, req.body);
 
-  xlsToJson({ input: filePath, output: null }, (err, result) => {
-    fs.unlinkSync(filePath); // Supprime fichier temporaire
+  xlsToJson({ input: tempFilePath, output: null }, (err, result) => {
+    fs.unlinkSync(tempFilePath);
     if (err) return res.status(500).json({ error: "Conversion failed", details: err });
 
     const parser = new Parser();
@@ -22,4 +23,4 @@ app.post("/convert", upload.single("file"), (req, res) => {
   });
 });
 
-app.listen(3000, () => console.log("✅ API XLS to CSV running on port 3000"));
+app.listen(3000, () => console.log("✅ API ready on port 3000"));
